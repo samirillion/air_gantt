@@ -3,11 +3,10 @@ const app = express();
 const dotenv = require('dotenv');
 dotenv.config();
 
-const AirGantt = require('./airgantt.js');
+var Airtable = require('airtable');
 
-const crv = new AirGantt(process.env.AIRTABLE);
-
-let tasks = crv.tasks();
+// const AirGantt = require('./airgantt.js');
+let base = new Airtable({apiKey: process.env.AIRTABLE}).base('appq8nALYBhLsFKeZ');
 
 // make all the files in 'public' availables
 // https://expressjs.com/en/starter/static-files.html
@@ -19,11 +18,23 @@ app.get("/", (request, response) => {
 });
 
 // send the default array of dreams to the webpage
-app.get("/dreams", (request, response) => {
-  // express helps us take JS objects and send them as JSON
-  console.log(tasks);
-  response.json(tasks);
+app.get("/tasks", (request, response) => {
+  let tasks = [];
+  base('Task').select({
+    view: "Main view"
+  }).eachPage(function page(records, fetchNextPage) {
+      // This function (`page`) will get called for each page of records.
 
+      records.forEach(function(record) {
+        tasks.push({ID: record.id, ...record.fields});
+      });
+
+      fetchNextPage();
+
+  }, function done(err) {
+      response.json(tasks);
+      if (err) { console.error(err); return; }
+  });
 });
 
 // listen for requests :)

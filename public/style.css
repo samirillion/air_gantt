@@ -1,56 +1,57 @@
-/* this file is loaded by index.html and styles the page */
-
-* {
-  box-sizing: border-box;
+svg {
+  background-color: #FFF;
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+  border: 2px solid black;
 }
 
-body {
-  font-family: sans-serif;
-  margin: 2em 1em;
-  line-height: 1.5em;
+svg:not(.active):not(.ctrl) {
+  cursor: crosshair;
 }
 
-h1 {
-  font-style: italic;
-  color: #373fff;
-  max-width: calc(100% - 5rem);
-  line-height: 1.1;
+path.link {
+  fill: none;
+  stroke: #000;
+  stroke-width: 4px;
+  cursor: default;
 }
 
-form {
-  background-color: #eee;
-  display: grid;
-  grid-gap: 1em;
-  padding: 1em;
-  max-width: 40ch;
-}
-
-input {
-  border: 1px solid silver;
-  display: block;
-  font-size: 16px;
-  margin-bottom: 10px;
-  padding: 5px;
-  width: 100%;
-}
-
-form button {
-  background-color: #bbbbf2;
-  border: 2px solid currentColor;
-  border-radius: .25em;
+svg:not(.active):not(.ctrl) path.link {
   cursor: pointer;
-  font-size: inherit;
-  line-height: 1.4em;
-  padding: 0.25em 1em;
-  max-width: 20ch;
 }
 
-form button:hover {
-  background-color: lavender;
+path.link.selected {
+  stroke-dasharray: 10,2;
 }
 
-footer {
-  margin-top: 3em;
-  padding-top: 1.5em;
-  border-top: 1px solid lightgrey;
+path.link.dragline {
+  pointer-events: none;
+}
+
+path.link.hidden {
+  stroke-width: 0;
+}
+
+circle.node {
+  stroke-width: 1.5px;
+  cursor: pointer;
+}
+
+circle.node.reflexive {
+  stroke: #000 !important;
+  stroke-width: 2.5px;
+}
+
+text {
+  font: 12px sans-serif;
+  pointer-events: none;
+}
+
+text.id {
+  text-anchor: middle;
+  font-weight: bold;
 }
