@@ -1,3 +1,12 @@
+// bounded box
+// https://bl.ocks.org/mbostock/1129492
+
+// anticollision
+// https://bl.ocks.org/mbostock/3231298
+
+// some fixed nodes
+// https://stackoverflow.com/questions/10392505/fix-node-position-in-d3-force-directed-layout
+
 async function getTasks() {
   let tasks = await fetch("/tasks");
   let taskData = await tasks.json();
@@ -17,7 +26,7 @@ async function buildGraph() {
       time: task.Duration,
       color: task.Category ? task.Category[0] : "0",
       priority: task.Priority,
-      prereqs: task.PreReqs
+      prereqs: task.PreReqs ? task.PreReqs : []
     });
     if (task.PreReqs) {
       task.PreReqs.forEach(prereq => {
@@ -43,8 +52,8 @@ buildGraph().then(res => {
   const links = res.links;
 
   // set up SVG for D3
-  const width = 1200;
-  const height = 600;
+  const width = 1000;
+  const height = 800;
   const colors = d3.scaleOrdinal(d3.schemeAccent);
 
   const svg = d3
@@ -93,7 +102,10 @@ buildGraph().then(res => {
     .forceSimulation()
     .force(
       "link",
-      d3.forceLink().id(d => d.id).strength(0.2)
+      d3
+        .forceLink()
+        .id(d => d.id)
+        .strength(0.3)
     )
     .force("charge", d3.forceManyBody().strength(-50))
     .force(
@@ -160,23 +172,26 @@ buildGraph().then(res => {
     // Mac Firefox doesn't distinguish between left/right click when Ctrl is held...
     .filter(() => d3.event.button === 0 || d3.event.button === 2)
     .on("start", d => {
+      // if (!d3.event.active) force.alphaTarget(0.3).restart();
 
-      if (!d3.event.active) force.alphaTarget(0.3).restart();
+      force.stop();
 
-      // force.stop();
-
-      d.fx = d.x;
-      d.fy = d.y;
+      // d.fx = d.x;
+      // d.fy = d.y;
     })
     .on("drag", d => {
-      d.fx = d3.event.x;
-      d.fy = d3.event.y;
+      // d.fx = d3.event.x;
+      // d.fy = d3.event.y;
+      d.px += d3.event.dx;
+      d.py += d3.event.dy;
+      d.x += d3.event.dx;
+      d.y += d3.event.dy;
+      tick();
     })
     .on("end", d => {
-      if (!d3.event.active) force.alphaTarget(0);
-
-      d.fx = null;
-      d.fy = null;
+      d.fixed = true; // of course set the node to fixed so the force doesn't include the node in its auto positioning stuff
+      tick();
+      // restart();
     });
 
   // line displayed when dragging new nodes
@@ -206,13 +221,14 @@ buildGraph().then(res => {
   function tick() {
     // draw directed edges with proper padding from node centers
     path.attr("d", d => {
+      console.log(d);
       const deltaX = d.target.x - d.source.x;
       const deltaY = d.target.y - d.source.y;
       const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       const normX = deltaX / dist;
       const normY = deltaY / dist;
-      const sourcePadding = d.left ? 17 : 12;
-      const targetPadding = d.right ? 17 : 12;
+      const sourcePadding = d.left ? 30 : 20;
+      const targetPadding = d.right ? 30 : 20;
       const sourceX = d.source.x + sourcePadding * normX;
       const sourceY = d.source.y + sourcePadding * normY;
       const targetX = d.target.x - targetPadding * normX;
@@ -221,7 +237,9 @@ buildGraph().then(res => {
       return `M${sourceX},${sourceY}L${targetX},${targetY}`;
     });
 
-    circle.attr("transform", d => `translate(${d.x},${d.y})`);
+    circle.attr("transform", d => {
+      return `translate(${d.x},${d.y})`;
+    });
   }
 
   // update graph (called when needed)
@@ -273,7 +291,6 @@ buildGraph().then(res => {
           : colors(d.color)
       )
       .classed("reflexive", d => {
-        console.log(d);
         return d.reflexive;
       });
 
@@ -286,7 +303,9 @@ buildGraph().then(res => {
     g.append("svg:circle")
       .attr("class", "node")
       .attr("r", d => {
-        return d.time ? d.time / 200 : 18;
+        let area = d.time ? d.time / 2 : 1000;
+        let radius = Math.sqrt(area / Math.PI);
+        return radius;
       })
       .style("fill", d =>
         d === selectedNode
@@ -370,13 +389,15 @@ buildGraph().then(res => {
       });
 
     // show node IDs
-    g.append("svg:text")
-      .attr("x", 0)
-      .attr("y", 4)
-      .attr("class", "name")
-      .text(d => {
-        return d.name + " " + d.priority;
-      });
+    g.append("foreignObject")
+      .attr("x", "-50px")
+      .attr("background", "white")
+      .attr("width", "100px")
+      .attr("height", "15px")
+      .append("xhtml:div")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .text(d => d.name);
 
     circle = g.merge(circle);
 

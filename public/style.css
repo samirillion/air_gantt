@@ -1,5 +1,5 @@
 svg {
-  background-color: #FFF;
+  background-color: #fff;
   cursor: default;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -25,7 +25,7 @@ svg:not(.active):not(.ctrl) path.link {
 }
 
 path.link.selected {
-  stroke-dasharray: 10,2;
+  stroke-dasharray: 10, 2;
 }
 
 path.link.dragline {
@@ -56,8 +56,28 @@ text:hover {
   font: 15px sans-serif;
 }
 
+text:before {
+  content: "";
+  height: 20px;
+  width: 100px;
+  background: white;
+}
+
 text.name {
   width: 50px;
   text-anchor: middle;
   display: block;
+  overflow: visible;
+  word-wrap: break-word;
+}
+
+foreignObject {
+  height: 50px;
+}
+
+foreignObject div {
+  line-height: .8;
+  font: 12px sans-serif;
+  text-align: center;
+  background: rgba(255,255,255,.65);
 }
