@@ -1,4 +1,29 @@
-// set up SVG for D3
+async function getTasks() {
+  let tasks = await fetch("/tasks");
+  let taskData = await tasks.json();
+  return taskData;
+}
+
+async function buildGraph() {
+  let tasks = await getTasks();
+  let nodes = [];
+  let links = [];
+
+  tasks.forEach(task => {
+    nodes.push({id: task.ID, reflexive: false});
+    if (task.PreReqs) {
+      task.PreReqs.forEach(prereq => {
+        links.push({source: task.ID, target: prereq, left: false, right: true});
+      });
+    }
+  });
+
+  return {nodes, links};
+}
+
+
+buildGraph().then(res => {
+  // set up SVG for D3
 const width = 960;
 const height = 500;
 const colors = d3.scaleOrdinal(d3.schemeCategory10);
@@ -13,6 +38,7 @@ const svg = d3.select('body')
 //  - nodes are known by 'id', not by index in array.
 //  - reflexive edges are indicated on the node (as a bold black circle).
 //  - links are always source < target; edge directions are set by 'left' and 'right'.
+
 const nodes = [
   { id: "cool", reflexive: true },
   { id: 4, reflexive: true },
@@ -23,36 +49,6 @@ const links = [
   { source: nodes[0], target: nodes[1], left: false, right: true },
   { source: nodes[1], target: nodes[2], left: false, right: true },
 ];
-
-async function getTasks() {
-  let tasks = await fetch("/tasks");
-  let taskData = await tasks.json();
-  return taskData;
-}
-
-async function buildGraph() {
-  let tasks = await getTasks();
-  let nodes = [];
-  let links = [];
-
-  let nodes = tasks.forEach(task => {
-    nodes.push({id: task.ID, reflexiv: false});
-    if (task.PreReqs) {
-      task.PreReqs.forEach(prereq => {
-        links.push({source: task.ID, target: prereq, left: false, right: true});
-      });
-    }
-  });
-
-  let links = tasks.map(task => {
-    return 
-  })
-
-  return {nodes, links};
-}
-
-let everytttthing = buildGraph().then(res => {
-});
 
 // init D3 force layout
 const force = d3.forceSimulation()
@@ -403,3 +399,5 @@ d3.select(window)
   .on('keydown', keydown)
   .on('keyup', keyup);
 restart();
+
+});
