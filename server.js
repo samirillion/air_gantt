@@ -22,7 +22,7 @@ app.get("/tasks", (request, response) => {
   let tasks = [];
   base('Task').select({
     view: "Main view",
-    maxRecords: 3,
+    // maxRecords: 3,
   }).eachPage(function page(records, fetchNextPage) {
       // This function (`page`) will get called for each page of records.
 

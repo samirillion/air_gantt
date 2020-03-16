@@ -10,11 +10,13 @@ async function buildGraph() {
   let links = [];
 
   tasks.forEach(task => {
+    console.log(task);
     nodes.push({
       id: task.ID,
       reflexive: false,
       name: task.Name,
-      time: task.Duration
+      time: task.Duration,
+      color: task.Category ? task.Category[0] : "0"
     });
     if (task.PreReqs) {
       task.PreReqs.forEach(prereq => {
@@ -79,7 +81,6 @@ buildGraph().then(res => {
     // Mac Firefox doesn't distinguish between left/right click when Ctrl is held...
     .filter(() => d3.event.button === 0 || d3.event.button === 2)
     .on("start", d => {
-      force.stop();
       if (!d3.event.active) force.alphaTarget(0.3).restart();
 
       d.fx = d.x;
@@ -212,12 +213,15 @@ buildGraph().then(res => {
       .style("fill", d =>
         d === selectedNode
           ? d3
-              .rgb(colors(d.id))
+              .rgb(colors(d.color))
               .brighter()
               .toString()
-          : colors(d.id)
+          : colors(d.color)
       )
-      .classed("reflexive", d => d.reflexive);
+      .classed("reflexive", d => {
+        console.log(d);
+        return d.reflexive;
+      });
 
     // remove old nodes
     circle.exit().remove();
@@ -233,10 +237,10 @@ buildGraph().then(res => {
       .style("fill", d =>
         d === selectedNode
           ? d3
-              .rgb(colors(d.id))
+              .rgb(colors(d.color))
               .brighter()
               .toString()
-          : colors(d.id)
+          : colors(d.color)
       )
       .style("stroke", d =>
         d3
