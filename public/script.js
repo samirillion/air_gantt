@@ -10,13 +10,14 @@ async function buildGraph() {
   let links = [];
 
   tasks.forEach(task => {
-    console.log(task);
     nodes.push({
       id: task.ID,
       reflexive: false,
       name: task.Name,
       time: task.Duration,
-      color: task.Category ? task.Category[0] : "0"
+      color: task.Category ? task.Category[0] : "0",
+      priority: task.Priority,
+      prereqs: task.PreReqs
     });
     if (task.PreReqs) {
       task.PreReqs.forEach(prereq => {
@@ -55,49 +56,6 @@ buildGraph().then(res => {
     .attr("width", width)
     .attr("height", height);
 
-  // set up initial nodes and links
-  //  - nodes are known by 'id', not by index in array.
-  //  - reflexive edges are indicated on the node (as a bold black circle).
-  //  - links are always source < target; edge directions are set by 'left' and 'right'.
-
-  // init D3 force layout
-  const force = d3
-    .forceSimulation()
-    .force(
-      "link",
-      d3
-        .forceLink()
-        .id(d => d.id)
-        .distance(100)
-    )
-    .force("charge", d3.forceManyBody().strength(-500))
-    .force("x", d3.forceX(width / 2))
-    .force("y", d3.forceY(height / 2))
-    .on("tick", tick);
-
-  // init D3 drag support
-  const drag = d3
-    .drag()
-    // Mac Firefox doesn't distinguish between left/right click when Ctrl is held...
-    .filter(() => d3.event.button === 0 || d3.event.button === 2)
-    .on("start", d => {
-      if (!d3.event.active) force.alphaTarget(0.3).restart();
-
-      d.fx = d.x;
-      d.fy = d.y;
-    })
-    .on("drag", d => {
-      d.fx = d3.event.x;
-      d.fy = d3.event.y;
-    })
-    .on("end", d => {
-      // force.restart();
-      if (!d3.event.active) force.alphaTarget(0);
-
-      d.fx = null;
-      d.fy = null;
-    });
-
   // define arrow markers for graph links
   svg
     .append("svg:defs")
@@ -124,6 +82,102 @@ buildGraph().then(res => {
     .append("svg:path")
     .attr("d", "M10,-5L0,0L10,5")
     .attr("fill", "#000");
+
+  // set up initial nodes and links
+  //  - nodes are known by 'id', not by index in array.
+  //  - reflexive edges are indicated on the node (as a bold black circle).
+  //  - links are always source < target; edge directions are set by 'left' and 'right'.
+
+  // init D3 force layout
+  const force = d3
+    .forceSimulation()
+    .force(
+      "link",
+      d3.forceLink().id(d => d.id).strength(0.2)
+    )
+    .force("charge", d3.forceManyBody().strength(-50))
+    .force(
+      "x",
+      d3
+        .forceX(d => {
+          let strength = 50;
+          let modifier = d.prereqs
+            ? (d.prereqs.length + 1) * strength
+            : strength;
+          switch (d.priority) {
+            case 1:
+              return 200;
+              break;
+            case 2:
+              return width - 200;
+              break;
+            case 3:
+              return width - 200;
+              break;
+            case 4:
+              return 200;
+              break;
+            default:
+              return 200;
+              break;
+          }
+        })
+        .strength(0.05)
+    )
+    .force(
+      "y",
+      d3
+        .forceY(d => {
+          let strength = 50;
+          let modifier = d.prereqs
+            ? (d.prereqs.length + 1) * strength
+            : strength;
+          switch (d.priority) {
+            case 1:
+              return modifier;
+              break;
+            case 2:
+              return modifier;
+              break;
+            case 3:
+              return height - modifier;
+              break;
+            case 4:
+              return height - modifier;
+              break;
+            default:
+              return height - modifier;
+              break;
+          }
+        })
+        .strength(0.05)
+    )
+    .on("tick", tick);
+
+  // init D3 drag support
+  const drag = d3
+    .drag()
+    // Mac Firefox doesn't distinguish between left/right click when Ctrl is held...
+    .filter(() => d3.event.button === 0 || d3.event.button === 2)
+    .on("start", d => {
+
+      if (!d3.event.active) force.alphaTarget(0.3).restart();
+
+      // force.stop();
+
+      d.fx = d.x;
+      d.fy = d.y;
+    })
+    .on("drag", d => {
+      d.fx = d3.event.x;
+      d.fy = d3.event.y;
+    })
+    .on("end", d => {
+      if (!d3.event.active) force.alphaTarget(0);
+
+      d.fx = null;
+      d.fy = null;
+    });
 
   // line displayed when dragging new nodes
   const dragLine = svg
@@ -321,7 +375,7 @@ buildGraph().then(res => {
       .attr("y", 4)
       .attr("class", "name")
       .text(d => {
-        return d.name;
+        return d.name + " " + d.priority;
       });
 
     circle = g.merge(circle);
