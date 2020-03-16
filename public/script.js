@@ -23,7 +23,7 @@ async function buildGraph() {
     }
   });
 
-  console.log(tasks);
+  // console.log(tasks);
 
   return { lastNodeId: nodes[0].id, nodes, links };
 }
@@ -221,8 +221,7 @@ buildGraph().then(res => {
     g.append("svg:circle")
       .attr("class", "node")
       .attr("r", d => {
-        console.log(d);
-        return d.time / 200;
+        return d.time ? d.time / 200: 18;
       })
       .style("fill", d =>
         d === selectedNode
