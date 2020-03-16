@@ -47,11 +47,17 @@ circle.node.reflexive {
 }
 
 text {
-  font: 12px sans-serif;
+  color: #333;
+  font: 10px sans-serif;
   pointer-events: none;
 }
 
-text.id {
+text:hover {
+  font: 15px sans-serif;
+}
+
+text.name {
+  width: 50px;
   text-anchor: middle;
-  font-weight: bold;
+  display: block;
 }

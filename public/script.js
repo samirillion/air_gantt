@@ -10,7 +10,12 @@ async function buildGraph() {
   let links = [];
 
   tasks.forEach(task => {
-    nodes.push({ id: task.ID, reflexive: false, name: task.Name, time: task.Duration });
+    nodes.push({
+      id: task.ID,
+      reflexive: false,
+      name: task.Name,
+      time: task.Duration
+    });
     if (task.PreReqs) {
       task.PreReqs.forEach(prereq => {
         links.push({
@@ -37,7 +42,7 @@ buildGraph().then(res => {
   // set up SVG for D3
   const width = 1200;
   const height = 600;
-  const colors = d3.scaleOrdinal(d3.schemeCategory10);
+  const colors = d3.scaleOrdinal(d3.schemeAccent);
 
   const svg = d3
     .select("body")
@@ -74,6 +79,7 @@ buildGraph().then(res => {
     // Mac Firefox doesn't distinguish between left/right click when Ctrl is held...
     .filter(() => d3.event.button === 0 || d3.event.button === 2)
     .on("start", d => {
+      force.stop();
       if (!d3.event.active) force.alphaTarget(0.3).restart();
 
       d.fx = d.x;
@@ -84,6 +90,7 @@ buildGraph().then(res => {
       d.fy = d3.event.y;
     })
     .on("end", d => {
+      // force.restart();
       if (!d3.event.active) force.alphaTarget(0);
 
       d.fx = null;
@@ -221,7 +228,7 @@ buildGraph().then(res => {
     g.append("svg:circle")
       .attr("class", "node")
       .attr("r", d => {
-        return d.time ? d.time / 200: 18;
+        return d.time ? d.time / 200 : 18;
       })
       .style("fill", d =>
         d === selectedNode
@@ -308,7 +315,7 @@ buildGraph().then(res => {
     g.append("svg:text")
       .attr("x", 0)
       .attr("y", 4)
-      .attr("class", "id")
+      .attr("class", "name")
       .text(d => {
         return d.name;
       });
