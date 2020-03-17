@@ -7,9 +7,6 @@
 // some fixed nodes
 // https://stackoverflow.com/questions/10392505/fix-node-position-in-d3-force-directed-layout
 
-const conf = {
-  defaultArea: 3600
-};
 async function getTasks() {
   let tasks = await fetch("/tasks");
   let taskData = await tasks.json();
@@ -30,8 +27,7 @@ async function buildGraph() {
       time: task.Duration,
       color: task.Category ? task.Category[0] : "0",
       priority: task.Priority[0],
-      prereqs: task.PreReqs ? task.PreReqs : [],
-      radius: radiusFromArea(task.Duration ? task.Duration : conf.defaultArea)
+      prereqs: task.PreReqs ? task.PreReqs : []
     });
     if (task.PreReqs) {
       task.PreReqs.forEach(prereq => {
@@ -48,8 +44,8 @@ async function buildGraph() {
   return { lastNodeId: nodes[0].id, nodes, links };
 }
 
-function radiusFromArea(area = 1000) {
-  return Math.sqrt(area / 2 / Math.PI);
+function radiusFromArea(area) {
+  return Math.sqrt(area / Math.PI);
 }
 
 // wrap the entire thing here
@@ -112,7 +108,7 @@ buildGraph().then(res => {
       d3
         .forceLink()
         .id(d => d.id)
-        .strength(0.05)
+        .strength(0.3)
     )
     .force("charge", d3.forceManyBody().strength(-50))
     .force(
@@ -228,15 +224,17 @@ buildGraph().then(res => {
   function tick() {
     // draw directed edges with proper padding from node centers
     path.attr("d", d => {
-      const targetRadius = d.target.radius;
-      const sourceRadius = d.source.radius;
+      let targetTime = d.target.time ? d.target.time : 1200;
+      let sourceTime = d.source.time ? d.source.time : 1200;
+      const targetRadius = radiusFromArea(targetTime);
+      const sourceRadius = radiusFromArea(sourceTime);
       const deltaX = d.target.x - d.source.x;
       const deltaY = d.target.y - d.source.y;
       const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       const normX = deltaX / dist;
       const normY = deltaY / dist;
-      const sourcePadding = sourceRadius + 2;
-      const targetPadding = targetRadius + 7;
+      const sourcePadding = d.left ? sourceRadius : sourceRadius - 5;
+      const targetPadding = d.right ? targetRadius : targetRadius;
       const sourceX = d.source.x + sourcePadding * normX;
       const sourceY = d.source.y + sourcePadding * normY;
       const targetX = d.target.x - targetPadding * normX;
@@ -311,7 +309,9 @@ buildGraph().then(res => {
     g.append("svg:circle")
       .attr("class", "node")
       .attr("r", d => {
-        return d.radius;
+        let area = d.time ? d.time : 1000;
+        let radius = radiusFromArea(area / 2);
+        return radius;
       })
       .style("fill", d =>
         d === selectedNode
