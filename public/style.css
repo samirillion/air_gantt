@@ -71,7 +71,8 @@ text.name {
   word-wrap: break-word;
 }
 
-foreignObject {
+/* Not using right now */
+/* foreignObject {
   height: 50px;
 }
 
@@ -80,4 +81,4 @@ foreignObject div {
   font: 12px sans-serif;
   text-align: center;
   background: rgba(255,255,255,.65);
-}
+} */
