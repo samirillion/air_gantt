@@ -19,7 +19,8 @@ async function buildGraph() {
   let links = [];
 
   tasks.forEach(task => {
-    console.log("task", task);
+    let area = task.Duration ? task.Duration : 1200;
+    let radius = radiusFromArea(area);
     nodes.push({
       id: task.ID,
       reflexive: false,
@@ -27,7 +28,8 @@ async function buildGraph() {
       time: task.Duration,
       color: task.Category ? task.Category[0] : "0",
       priority: task.Priority[0],
-      prereqs: task.PreReqs ? task.PreReqs : []
+      prereqs: task.PreReqs ? task.PreReqs : [],
+      radius
     });
     if (task.PreReqs) {
       task.PreReqs.forEach(prereq => {
@@ -45,7 +47,7 @@ async function buildGraph() {
 }
 
 function radiusFromArea(area) {
-  return Math.sqrt(area / Math.PI);
+  return Math.sqrt(area / Math.PI / 1.5);
 }
 
 // wrap the entire thing here
@@ -110,7 +112,7 @@ buildGraph().then(res => {
         .id(d => d.id)
         .strength(0.3)
     )
-    .force("charge", d3.forceManyBody().strength(-50))
+    .force("charge", d3.forceManyBody().strength(-100))
     .force(
       "x",
       d3
@@ -121,19 +123,19 @@ buildGraph().then(res => {
             : strength;
           switch (d.priority) {
             case 1:
-              return 200;
+              return 0;
               break;
             case 2:
-              return width - 200;
+              return width;
               break;
             case 3:
-              return width - 200;
+              return width;
               break;
             case 4:
-              return 200;
+              return 0;
               break;
             default:
-              return 200;
+              return 0;
               break;
           }
         })
@@ -224,17 +226,13 @@ buildGraph().then(res => {
   function tick() {
     // draw directed edges with proper padding from node centers
     path.attr("d", d => {
-      let targetTime = d.target.time ? d.target.time : 1200;
-      let sourceTime = d.source.time ? d.source.time : 1200;
-      const targetRadius = radiusFromArea(targetTime);
-      const sourceRadius = radiusFromArea(sourceTime);
       const deltaX = d.target.x - d.source.x;
       const deltaY = d.target.y - d.source.y;
       const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       const normX = deltaX / dist;
       const normY = deltaY / dist;
-      const sourcePadding = d.left ? sourceRadius : sourceRadius - 5;
-      const targetPadding = d.right ? targetRadius : targetRadius;
+      const sourcePadding = d.left ? d.source.radius : d.source.radius - 7;
+      const targetPadding = d.right ? d.target.radius : d.target.radius;
       const sourceX = d.source.x + sourcePadding * normX;
       const sourceY = d.source.y + sourcePadding * normY;
       const targetX = d.target.x - targetPadding * normX;
@@ -244,6 +242,8 @@ buildGraph().then(res => {
     });
 
     circle.attr("transform", d => {
+      d.x = Math.max(d.radius, Math.min(width - d.radius, d.x));
+      d.y = Math.max(d.radius, Math.min(height - d.radius, d.y));
       return `translate(${d.x},${d.y})`;
     });
   }
@@ -309,9 +309,7 @@ buildGraph().then(res => {
     g.append("svg:circle")
       .attr("class", "node")
       .attr("r", d => {
-        let area = d.time ? d.time : 1000;
-        let radius = radiusFromArea(area / 2);
-        return radius;
+        return d.radius - 5;
       })
       .style("fill", d =>
         d === selectedNode
