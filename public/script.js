@@ -13,6 +13,9 @@
 // zoomable
 // https://bl.ocks.org/puzzler10/4438752bb93f45dc5ad5214efaa12e4a
 
+// more collision detection
+// https://bl.ocks.org/d3indepth/9d9f03a0016bc9df0f13b0d52978c02f
+
 async function getTasks() {
   let tasks = await fetch("/tasks");
   let taskData = await tasks.json();
@@ -171,7 +174,7 @@ buildGraph().then(res => {
         .id(d => d.id)
         .strength(0.3)
     )
-    .force("charge", d3.forceManyBody().strength(-100))
+    .force("charge", d3.forceManyBody().strength(0))
     .force(
       "x",
       d3
@@ -228,6 +231,12 @@ buildGraph().then(res => {
         })
         .strength(0.05)
     )
+    .force(
+      "collision",
+      d3.forceCollide().radius(function(d) {
+        return d.radius + 10;
+      })
+    )
     .on("tick", tick);
 
   // init D3 drag support
@@ -248,11 +257,9 @@ buildGraph().then(res => {
     .on("end", d => {
       if (!d3.event.active) force.alphaTarget(0);
       if (d.prereqs === undefined || d.prereqs.length == 0) {
-        console.log("no reqs", d.prereqs);
       } else {
         d.fx = null;
         d.fy = null;
-        console.log("reqs", d.prereqs);
       }
     });
 
@@ -329,25 +336,17 @@ buildGraph().then(res => {
       return gradient;
     });
 
+    // var q = d3.quadtree(nodes),
+    //   i = 0,
+    //   n = nodes.length;
+
+    // while (++i < n) q.visit(collide(nodes[i]));
+
     circle.attr("transform", d => {
       d.x = Math.max(d.radius, Math.min(width - d.radius, d.x));
       d.y = Math.max(d.radius, Math.min(height - d.radius, d.y));
       return `translate(${d.x},${d.y})`;
     });
-
-    // var q = d3.quadtree(nodes),
-    //   i = 0,
-    //   n = nodes.length;
-
-    // while (++i < n) q.visit(collide(d));
-    // svg
-    //   .selectAll("circle")
-    //   .attr("cx", function(d) {
-    //     return d.x;
-    //   })
-    //   .attr("cy", function(d) {
-    //     return d.y;
-    //   });
   }
 
   // update graph (called when needed)
