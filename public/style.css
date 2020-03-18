@@ -1,3 +1,7 @@
+body {
+  background: #f5f5f5;
+  text-align: center;
+}
 svg {
   background-color: #fff;
   cursor: default;
@@ -6,7 +10,7 @@ svg {
   -ms-user-select: none;
   -o-user-select: none;
   user-select: none;
-  border: 2px solid black;
+  border: 5px solid black;
 }
 
 svg:not(.active):not(.ctrl) {
@@ -15,8 +19,8 @@ svg:not(.active):not(.ctrl) {
 
 path.link {
   fill: none;
-  stroke: cyan;
-  stroke-width: 3px;
+  stroke: #9b9eff;
+  stroke-width: 4px;
   cursor: default;
 }
 
@@ -59,7 +63,7 @@ foreignObject > div {
   align-items: center;
   justify-content: center;
   height: 100%;
-  line-height: .8;
+  line-height: 0.95;
 }
 
 text:hover {
