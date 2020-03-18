@@ -19,14 +19,14 @@ async function buildGraph() {
   let links = [];
 
   tasks.forEach(task => {
-    let area = task.Duration ? task.Duration : 1200;
+    let area = task.Duration ? task.Duration : 3600;
     let radius = radiusFromArea(area);
     nodes.push({
       id: task.ID,
       reflexive: false,
       name: task.Name,
       time: task.Duration,
-      color: task.Category ? task.Category[0] : "0",
+      color: task.Type ? task.Type[0] : "0",
       priority: task.Priority[0],
       prereqs: task.PreReqs ? task.PreReqs : [],
       radius
@@ -47,7 +47,7 @@ async function buildGraph() {
 }
 
 function radiusFromArea(area) {
-  return Math.sqrt(area / Math.PI / 1.5);
+  return Math.sqrt(area / Math.PI / 2);
 }
 
 // wrap the entire thing here
@@ -59,7 +59,8 @@ buildGraph().then(res => {
   // set up SVG for D3
   const width = 1000;
   const height = 800;
-  const colors = d3.scaleOrdinal(d3.schemeAccent);
+  // optionally, use custom scheme ["#011E93", "#FE8A03", "#CFB485", "#C4BEBE", "#C4BEBE", "gold", "grey", "pink", "brown", "slateblue"]
+  const colors = d3.scaleOrdinal(d3.schemePastel2);
 
   const svg = d3
     .select("body")
@@ -82,7 +83,7 @@ buildGraph().then(res => {
     .attr("orient", "auto")
     .append("svg:path")
     .attr("d", "M0,-5L10,0L0,5")
-    .attr("fill", "#000");
+    .attr("fill", "cyan");
 
   svg
     .append("svg:defs")
@@ -95,7 +96,49 @@ buildGraph().then(res => {
     .attr("orient", "auto")
     .append("svg:path")
     .attr("d", "M10,-5L0,0L10,5")
-    .attr("fill", "#000");
+    .attr("fill", "cyan");
+
+  const defs = svg.append("defs");
+
+  const gradRight = defs
+    .append("linearGradient")
+    .attr("id", "gradRight")
+    .attr("x1", "0%")
+    .attr("x2", "100%");
+
+  const gradLeft = defs
+    .append("linearGradient")
+    .attr("id", "gradLeft")
+    .attr("x1", "0%")
+    .attr("x2", "100%");
+
+  gradRight
+    .append("stop")
+    .attr("class", "start")
+    .attr("offset", "0%")
+    .attr("stop-color", "cyan")
+    .attr("stop-opacity", 1);
+
+  gradRight
+    .append("stop")
+    .attr("class", "end")
+    .attr("offset", "100%")
+    .attr("stop-color", "white")
+    .attr("stop-opacity", 0);
+
+  gradLeft
+    .append("stop")
+    .attr("class", "start")
+    .attr("offset", "0%")
+    .attr("stop-color", "white")
+    .attr("stop-opacity", 0);
+
+  gradLeft
+    .append("stop")
+    .attr("class", "end")
+    .attr("offset", "100%")
+    .attr("stop-color", "cyan")
+    .attr("stop-opacity", 1);
 
   // set up initial nodes and links
   //  - nodes are known by 'id', not by index in array.
@@ -222,6 +265,30 @@ buildGraph().then(res => {
     mousedownLink = null;
   }
 
+  function collide(node) {
+    var r = node.radius + 16,
+      nx1 = node.x - r,
+      nx2 = node.x + r,
+      ny1 = node.y - r,
+      ny2 = node.y + r;
+    return function(quad, x1, y1, x2, y2) {
+      if (quad.point && quad.point !== node) {
+        var x = node.x - quad.point.x,
+          y = node.y - quad.point.y,
+          l = Math.sqrt(x * x + y * y),
+          r = node.radius + quad.point.radius;
+        if (l < r) {
+          l = ((l - r) / l) * 0.5;
+          node.x -= x *= l;
+          node.y -= y *= l;
+          quad.point.x += x;
+          quad.point.y += y;
+        }
+      }
+      return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+    };
+  }
+
   // update force layout (called automatically each iteration)
   function tick() {
     // draw directed edges with proper padding from node centers
@@ -241,7 +308,20 @@ buildGraph().then(res => {
       return `M${sourceX},${sourceY}L${targetX},${targetY}`;
     });
 
+    path.style("stroke", d => {
+      const deltaX = d.target.x - d.source.x;
+      let gradient =
+        deltaX <= 0 && d.right ? "url(#gradLeft)" : "url(#gradRight)";
+      return gradient;
+    });
+
     circle.attr("transform", d => {
+      var q = d3.quadtree(nodes),
+        i = 0,
+        n = nodes.length;
+
+      while (++i < n) q.visit(collide(d));
+
       d.x = Math.max(d.radius, Math.min(width - d.radius, d.x));
       d.y = Math.max(d.radius, Math.min(height - d.radius, d.y));
       return `translate(${d.x},${d.y})`;
@@ -258,7 +338,6 @@ buildGraph().then(res => {
       .classed("selected", d => d === selectedLink)
       .style("marker-start", d => (d.left ? "url(#start-arrow)" : ""))
       .style("marker-end", d => (d.right ? "url(#end-arrow)" : ""));
-
     // remove old links
     path.exit().remove();
 
@@ -321,7 +400,7 @@ buildGraph().then(res => {
       )
       .style("stroke", d =>
         d3
-          .rgb(colors(d.id))
+          .rgb(colors(d.color))
           .darker()
           .toString()
       )
@@ -393,19 +472,16 @@ buildGraph().then(res => {
       });
 
     // show node IDs
-    // g.append("svg:foreignObject")
-    //   .attr("x", "-50px")
-    //   .attr("background", "white")
-    //   .attr("width", "100px")
-    //   .attr("height", "15px")
-    //   .append("xhtml:div")
-    //   .attr("height", "100%")
-    //   .attr("width", "100%")
-    //   .text(d => d.name);
-
-    g.append("svg:text")
-      .attr("x", "-20px")
-      .attr("class", "id")
+    g.append("svg:foreignObject")
+      .attr("x", d => -d.radius)
+      .attr("y", d => -d.radius)
+      .attr("background", "white")
+      .attr("height", d => d.radius * 2)
+      .attr("width", d => d.radius * 2)
+      .append("xhtml:div")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("backgroundColor", "white")
       .text(d => d.name);
 
     circle = g.merge(circle);

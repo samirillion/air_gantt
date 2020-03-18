@@ -15,8 +15,8 @@ svg:not(.active):not(.ctrl) {
 
 path.link {
   fill: none;
-  stroke: #000;
-  stroke-width: 4px;
+  stroke: cyan;
+  stroke-width: 3px;
   cursor: default;
 }
 
@@ -46,21 +46,24 @@ circle.node.reflexive {
   stroke-width: 2.5px;
 }
 
-text {
+text,
+foreignObject {
   color: #333;
   font: 10px sans-serif;
   pointer-events: none;
 }
 
-text:hover {
-  font: 15px sans-serif;
+foreignObject > div {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  line-height: .8;
 }
 
-text:before {
-  content: "";
-  height: 20px;
-  width: 100px;
-  background: white;
+text:hover {
+  font: 15px sans-serif;
 }
 
 text.name {
