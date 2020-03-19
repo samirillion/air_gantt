@@ -16,6 +16,9 @@
 // more collision detection
 // https://bl.ocks.org/d3indepth/9d9f03a0016bc9df0f13b0d52978c02f
 
+// mult-foci force layout
+// https://bl.ocks.org/mbostock/1804919
+
 async function getTasks() {
   let tasks = await fetch("/tasks");
   let taskData = await tasks.json();
@@ -26,10 +29,25 @@ async function buildGraph() {
   let tasks = await getTasks();
   let nodes = [];
   let links = [];
+  let maxDepth = 0;
 
   tasks.forEach(task => {
+    let prereqCount = function(level, task_id) {
+      let task = tasks.filter(obj => {
+        return obj.ID === task_id;
+      })[0];
+      if (task.PreReqs && task.PreReqs.length > 0) {
+        task.PreReqs.forEach(function(d) {
+          return prereqCount(level + 1, d);
+        });
+      } else {
+        return level;
+      }
+    };
     let area = task.Duration ? task.Duration : 3600;
     let radius = radiusFromArea(area);
+    let depth = prereqCount(0, task.ID);
+    maxDepth = depth > maxDepth ? depth : maxDepth;
     nodes.push({
       id: task.ID,
       reflexive: false,
@@ -38,7 +56,8 @@ async function buildGraph() {
       color: task.Type ? task.Type[0] : "0",
       priority: task.Priority[0],
       prereqs: task.PreReqs ? task.PreReqs : [],
-      radius
+      radius,
+      depth
     });
     if (task.PreReqs) {
       task.PreReqs.forEach(prereq => {
@@ -52,7 +71,7 @@ async function buildGraph() {
     }
   });
 
-  return { lastNodeId: nodes[0].id, nodes, links };
+  return { lastNodeId: nodes[0].id, nodes, links, maxDepth };
 }
 
 function radiusFromArea(area) {
@@ -64,6 +83,7 @@ buildGraph().then(res => {
   const nodes = res.nodes;
   let lastNodeId = res.lastNodeId;
   const links = res.links;
+  const maxDepth = res.maxDepth;
 
   // set up SVG for D3
   const width = 1000;
@@ -256,11 +276,11 @@ buildGraph().then(res => {
     })
     .on("end", d => {
       if (!d3.event.active) force.alphaTarget(0);
-      if (d.prereqs === undefined || d.prereqs.length == 0) {
-      } else {
-        d.fx = null;
-        d.fy = null;
-      }
+      // if (d.prereqs === undefined || d.prereqs.length == 0) {
+      // } else {
+      //   d.fx = null;
+      //   d.fy = null;
+      // }
     });
 
   // line displayed when dragging new nodes
@@ -284,30 +304,6 @@ buildGraph().then(res => {
     mousedownNode = null;
     mouseupNode = null;
     mousedownLink = null;
-  }
-
-  function collide(node) {
-    var r = node.radius + 16,
-      nx1 = node.x - r,
-      nx2 = node.x + r,
-      ny1 = node.y - r,
-      ny2 = node.y + r;
-    return function(quad, x1, y1, x2, y2) {
-      if (quad.point && quad.point !== node) {
-        var x = node.x - quad.point.x,
-          y = node.y - quad.point.y,
-          l = Math.sqrt(x * x + y * y),
-          r = node.radius + quad.point.radius;
-        if (l < r) {
-          l = ((l - r) / l) * 0.5;
-          node.x -= x *= l;
-          node.y -= y *= l;
-          quad.point.x += x;
-          quad.point.y += y;
-        }
-      }
-      return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
-    };
   }
 
   // update force layout (called automatically each iteration)
@@ -335,12 +331,6 @@ buildGraph().then(res => {
         deltaX <= 0 && d.right ? "url(#gradLeft)" : "url(#gradRight)";
       return gradient;
     });
-
-    // var q = d3.quadtree(nodes),
-    //   i = 0,
-    //   n = nodes.length;
-
-    // while (++i < n) q.visit(collide(nodes[i]));
 
     circle.attr("transform", d => {
       d.x = Math.max(d.radius, Math.min(width - d.radius, d.x));
