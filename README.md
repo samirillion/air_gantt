@@ -1,6 +1,6 @@
 # Air Gantt
 
-Air Gantt pulls (gantt-like) data from an Airtable database table, via the API, and represents it as a force-directed graph using d3js. No build tools required. Just `node server.js` from the root folder.
+Air Gantt pulls (gantt-like) data from an Airtable database table, via the API, and represents it as a force-directed graph using d3js. No build tools required.
 
 ## Server Side
 
