@@ -19,6 +19,20 @@
 // mult-foci force layout
 // https://bl.ocks.org/mbostock/1804919
 
+const width = 1200;
+const height = 800;
+const ganttScheme = [
+  "#FCF3B0",
+  "#87E0FF",
+  "#FFB0B0",
+  "#9b9eff",
+  "gold",
+  "grey",
+  "pink",
+  "brown",
+  "slateblue"
+];
+
 async function getTasks() {
   let tasks = await fetch("/tasks");
   let taskData = await tasks.json();
@@ -36,13 +50,14 @@ async function buildGraph() {
       let task = tasks.filter(obj => {
         return obj.ID === task_id;
       })[0];
+
       if (task.PreReqs && task.PreReqs.length > 0) {
         task.PreReqs.forEach(function(d) {
-          return prereqCount(level + 1, d);
+          level = prereqCount(level + 1, d);
         });
-      } else {
-        return level;
       }
+
+      return level;
     };
     let area = task.Duration ? task.Duration : 3600;
     let radius = radiusFromArea(area);
@@ -85,21 +100,14 @@ buildGraph().then(res => {
   const links = res.links;
   const maxDepth = res.maxDepth;
 
-  // set up SVG for D3
-  const width = 1000;
-  const height = 800;
-  const ganttScheme = [
-    "#87E0FF",
-    "#FCF3B0",
-    "#FFB0B0",
-    "#9b9eff",
-    "gold",
-    "grey",
-    "pink",
-    "brown",
-    "slateblue"
-  ];
+  console.log(nodes);
+  console.log(maxDepth);
+
   const colors = d3.scaleOrdinal(ganttScheme);
+  const depth_spectrum_x = d3
+    .scaleLinear()
+    .domain(d3.range(maxDepth))
+    .range([0, width], 1);
 
   const svg = d3
     .select("body")
@@ -139,6 +147,7 @@ buildGraph().then(res => {
 
   const defs = svg.append("defs");
 
+  // define gradients for links
   const gradRight = defs
     .append("linearGradient")
     .attr("id", "gradRight")
@@ -192,69 +201,29 @@ buildGraph().then(res => {
       d3
         .forceLink()
         .id(d => d.id)
-        .strength(0.3)
-    )
-    .force("charge", d3.forceManyBody().strength(0))
-    .force(
-      "x",
-      d3
-        .forceX(d => {
-          let strength = 50;
-          let modifier = d.prereqs
-            ? (d.prereqs.length + 1) * strength
-            : strength;
-          switch (d.priority) {
-            case 1:
-              return 0;
-              break;
-            case 2:
-              return width;
-              break;
-            case 3:
-              return width;
-              break;
-            case 4:
-              return 0;
-              break;
-            default:
-              return 0;
-              break;
-          }
-        })
-        .strength(0.05)
+        .distance(100)
     )
     .force(
       "y",
       d3
         .forceY(d => {
-          let strength = 50;
-          let modifier = d.prereqs
-            ? (d.prereqs.length + 1) * strength
-            : strength;
-          switch (d.priority) {
-            case 1:
-              return modifier;
-              break;
-            case 2:
-              return modifier;
-              break;
-            case 3:
-              return height - modifier;
-              break;
-            case 4:
-              return height - modifier;
-              break;
-            default:
-              return height - modifier;
-              break;
-          }
+          return (height / 4) * d.priority + maxDepth * 6;
         })
         .strength(0.05)
     )
     .force(
+      "x",
+      d3
+        .forceX(d => {
+          return (width / maxDepth) * d.depth * 1.8;
+        })
+        .strength(0.3)
+    )
+    .force("charge", d3.forceManyBody().strength(-500))
+    .force(
       "collision",
       d3.forceCollide().radius(function(d) {
-        return d.radius + 10;
+        return d.radius + 5;
       })
     )
     .on("tick", tick);
@@ -339,6 +308,11 @@ buildGraph().then(res => {
     });
   }
 
+  function gravity(alpha) {
+    return function(d) {
+      d.x += depth_spectrum_x(d.depth) * alpha;
+    };
+  }
   // update graph (called when needed)
   function restart() {
     // path (link) group
