@@ -32,6 +32,17 @@ const ganttScheme = [
   "brown",
   "slateblue"
 ];
+const maxDepth = 7;
+
+const depth_log_x = d3
+  .scaleLog()
+  .domain([1, maxDepth + 1])
+  .range([0, width]);
+
+const phase_log_y = d3
+  .scaleLog()
+  .domain([1, 5])
+  .range([0, height]);
 
 async function getTasks() {
   let tasks = await fetch("/tasks");
@@ -43,16 +54,15 @@ async function buildGraph() {
   let tasks = await getTasks();
   let nodes = [];
   let links = [];
-  let maxDepth = 0;
 
   tasks.forEach(task => {
-    let prereqDepth = function(level, task_id, task_ids) {
+    let prereqDepth = function(level, task_id) {
       let task = tasks.filter(obj => {
         return obj.ID === task_id;
       })[0];
-      if (task.PreReqs && task.PreReqs.length > 0) {
+      if (task && task.PreReqs && task.PreReqs.length > 0) {
         task.PreReqs.forEach(function(d) {
-          if (level <= 6 && task_id !== d) {
+          if (level < maxDepth && task_id !== d) {
             level = prereqDepth(level + 1, d);
           }
         });
@@ -63,7 +73,6 @@ async function buildGraph() {
     let area = task.Duration ? task.Duration : 3600;
     let radius = radiusFromArea(area);
     let depth = prereqDepth(0, task.ID);
-    maxDepth = depth > maxDepth ? depth : maxDepth;
     nodes.push({
       id: task.ID,
       reflexive: false,
@@ -87,10 +96,10 @@ async function buildGraph() {
     }
   });
 
-  return { lastNodeId: nodes[0].id, nodes, links, maxDepth };
+  return { lastNodeId: nodes[0].id, nodes, links };
 }
 
-function radiusFromArea(area) {
+function radiusFromArea(area = 3600) {
   return Math.sqrt(area / Math.PI / 2) + 5;
 }
 
@@ -99,10 +108,6 @@ buildGraph().then(res => {
   const nodes = res.nodes;
   let lastNodeId = res.lastNodeId;
   const links = res.links;
-  const maxDepth = res.maxDepth;
-
-  console.log(nodes);
-  console.log(maxDepth);
 
   const colors = d3.scaleOrdinal(ganttScheme);
   const depth_spectrum_x = d3
@@ -202,13 +207,17 @@ buildGraph().then(res => {
       d3
         .forceLink()
         .id(d => d.id)
-        .distance(100)
+        .distance(60)
     )
     .force(
       "y",
       d3
         .forceY(d => {
-          return (height / 4) * d.priority + maxDepth * 6;
+          if (d.priority > 2) {
+            return (height / 4) * d.priority - (d.priority * height) / 8;
+          } else {
+            return (height / 4) * d.priority + (maxDepth + 1) * 5;
+          }
         })
         .strength(0.05)
     )
@@ -216,16 +225,15 @@ buildGraph().then(res => {
       "x",
       d3
         .forceX(d => {
-          console.log(d.depth);
-          return (width / 7) * d.depth;
+          return depth_log_x(d.depth + 1);
         })
-        .strength(0.5)
+        .strength(0.8)
     )
     .force("charge", d3.forceManyBody().strength(-500))
     .force(
       "collision",
       d3.forceCollide().radius(function(d) {
-        return d.radius + 5;
+        return d.radius + 10;
       })
     )
     .on("tick", tick);
@@ -308,12 +316,6 @@ buildGraph().then(res => {
       d.y = Math.max(d.radius, Math.min(height - d.radius, d.y));
       return `translate(${d.x},${d.y})`;
     });
-  }
-
-  function gravity(alpha) {
-    return function(d) {
-      d.x += depth_spectrum_x(d.depth) * alpha;
-    };
   }
   // update graph (called when needed)
   function restart() {
@@ -492,6 +494,13 @@ buildGraph().then(res => {
     const point = d3.mouse(this);
     const node = {
       id: ++lastNodeId,
+      reflexive: false,
+      name: "New Task",
+      color: "0",
+      prereqs: [],
+      depth: 0,
+      priority: 4,
+      radius: radiusFromArea(),
       reflexive: false,
       x: point[0],
       y: point[1]
