@@ -19,7 +19,7 @@
 // mult-foci force layout
 // https://bl.ocks.org/mbostock/1804919
 
-const width = 1200;
+const width = 1500;
 const height = 800;
 const ganttScheme = [
   "#FCF3B0",
@@ -46,14 +46,15 @@ async function buildGraph() {
   let maxDepth = 0;
 
   tasks.forEach(task => {
-    let prereqCount = function(level, task_id) {
+    let prereqDepth = function(level, task_id, task_ids) {
       let task = tasks.filter(obj => {
         return obj.ID === task_id;
       })[0];
-
       if (task.PreReqs && task.PreReqs.length > 0) {
         task.PreReqs.forEach(function(d) {
-          level = prereqCount(level + 1, d);
+          if (level <= 6 && task_id !== d) {
+            level = prereqDepth(level + 1, d);
+          }
         });
       }
 
@@ -61,7 +62,7 @@ async function buildGraph() {
     };
     let area = task.Duration ? task.Duration : 3600;
     let radius = radiusFromArea(area);
-    let depth = prereqCount(0, task.ID);
+    let depth = prereqDepth(0, task.ID);
     maxDepth = depth > maxDepth ? depth : maxDepth;
     nodes.push({
       id: task.ID,
@@ -171,15 +172,15 @@ buildGraph().then(res => {
     .append("stop")
     .attr("class", "end")
     .attr("offset", "100%")
-    .attr("stop-color", "white")
-    .attr("stop-opacity", 0);
+    .attr("stop-color", "#9b9eff")
+    .attr("stop-opacity", 0.1);
 
   gradLeft
     .append("stop")
     .attr("class", "start")
     .attr("offset", "0%")
-    .attr("stop-color", "white")
-    .attr("stop-opacity", 0);
+    .attr("stop-color", "#9b9eff")
+    .attr("stop-opacity", 0.1);
 
   gradLeft
     .append("stop")
@@ -215,9 +216,10 @@ buildGraph().then(res => {
       "x",
       d3
         .forceX(d => {
-          return (width / maxDepth) * d.depth * 1.8;
+          console.log(d.depth);
+          return (width / 7) * d.depth;
         })
-        .strength(0.3)
+        .strength(0.5)
     )
     .force("charge", d3.forceManyBody().strength(-500))
     .force(
